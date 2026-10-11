@@ -274,7 +274,7 @@ $('wallet').onclick=async()=>{
 const sg=$('surge');let st;
 function showSurge(){sg.style.display='block';clearTimeout(st);st=setTimeout(()=>sg.style.display='none',10000)}
 sg.onclick=()=>{const g=Math.max(rate()*60,50);add(g);sg.style.display='none';document.body.classList.add('flash');setTimeout(()=>document.body.classList.remove('flash'),500);toast('⚡ ¡Surge! +'+fmt(g)+' $FORGE');upd();afford()};
-setInterval(showSurge,50000);setTimeout(showSurge,15000);
+//setInterval(showSurge,50000);setTimeout(showSurge,15000);
 setInterval(()=>{add(rate());S.hist.push(rate());if(S.hist.length>60)S.hist.shift();upd();afford();save()},1000);
 (function loop(){dB+=(S.bal-dB)*.18;if(Math.abs(S.bal-dB)<.05)dB=S.bal;$('bal').textContent=fmt(dB);requestAnimationFrame(loop)})();
 // Fondo de partículas
