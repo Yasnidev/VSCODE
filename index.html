@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap">
 <title>ForgeMine — Idle Mining en Solana</title>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#07050f;--card:rgba(24,19,45,.72);--card2:rgba(40,32,78,.55);--line:rgba(153,69,255,.28);--txt:#f1eeff;--mut:#9690c0;--p:#9945ff;--g:#14f195;--gold:#ffd24a;--red:#ff5a7a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f1edff;--card:rgba(255,255,255,.8);--card2:rgba(240,234,255,.8);--line:rgba(120,70,220,.25);--txt:#1b1535;--mut:#6a6194;--g:#0aa66a}}
@@ -267,4 +268,104 @@ setInterval(()=>{const f=rate();if(f>0){add(f);S.hist.push(f);if(S.hist.length>6
 (function loop(){dB+=(S.bal-dB)*.18;if(Math.abs(S.bal-dB)<.05)dB=S.bal;$('bal').textContent=fmt(dB);requestAnimationFrame(loop)})();
 view();
 if(awayG>1)toast('💤 Mientras no estabas minaste '+fmt(awayG)+' $FORGE');
+ // ==========================================
+// CONEXIÓN Y LÓGICA DE SUPABASE (RANKING)
+// ==========================================
+const supabaseUrl = 'https://wvkkgyyjrumfdcpzzcug.supabase.co';
+const supabaseKey = 'sb_publishable_Q-korJ9cVAfTvbGywuYj4w_bVuoxV1R';
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// Guardar o actualizar usuario en la tabla 'leaderboard'
+async function syncScore(identifier, name, score) {
+    if (!identifier) return;
+    try {
+        let { data: existingUser } = await _supabase
+            .from('leaderboard')
+            .select('*')
+            .eq('identifier', identifier)
+            .single();
+
+        if (existingUser) {
+            if (score > existingUser.score) {
+                await _supabase
+                    .from('leaderboard')
+                    .update({ score: score, name: name })
+                    .eq('identifier', identifier);
+            }
+        } else {
+            await _supabase
+                .from('leaderboard')
+                .insert([{ identifier: identifier, name: name, score: score }]);
+        }
+        loadLeaderboard();
+    } catch (err) {
+        console.error("Error al sincronizar con Supabase:", err);
+    }
+}
+
+// Cargar los mejores 10 del Ranking desde Supabase
+async function loadLeaderboard() {
+    try {
+        let { data: leaderboard, error } = await _supabase
+            .from('leaderboard')
+            .select('*')
+            .order('score', { ascending: false })
+            .limit(10);
+
+        if (error) throw error;
+
+        const listContainer = document.getElementById('leaderboard-list') || document.querySelector('.leaderboard-list');
+        if (listContainer && leaderboard) {
+            listContainer.innerHTML = leaderboard.map((item, index) => `
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                    <span>#${index + 1} ${item.name}</span>
+                    <span style="font-weight:bold; color:#00ff88;">${Number(item.score).toLocaleString()} FORGE</span>
+                </div>
+            `).join('');
+        }
+    } catch (err) {
+        console.error("Error al cargar Ranking:", err);
+    }
+}
+
+// Registro con Phantom Wallet
+async function registerWithPhantom() {
+    if (window.solana && window.solana.isPhantom) {
+        try {
+            const resp = await window.solana.connect();
+            const wallet = resp.publicKey.toString();
+            const alias = `Phantom_${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+            const currentScore = window.userScore || 0;
+            await syncScore(wallet, alias, currentScore);
+            alert("¡Conectado con Phantom y registrado en el Ranking!");
+        } catch (e) {
+            console.error(e);
+        }
+    } else {
+        alert("Por favor abre o instala Phantom Wallet.");
+    }
+}
+
+// Registro con Correo Electrónico
+async function registerWithEmail() {
+    const email = prompt("Introduce tu correo electrónico para el Ranking:");
+    if (email && email.includes('@')) {
+        const name = prompt("Introduce tu nombre o alias público:") || email.split('@')[0];
+        const currentScore = window.userScore || 0;
+        await syncScore(email, name, currentScore);
+        alert("¡Registrado en el Ranking con éxito!");
+    }
+}
+
+// Autodetección si abre dentro de Telegram
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.Telegram && window.Telegram.WebApp?.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        const identifier = `tg_${tgUser.id}`;
+        const name = tgUser.first_name || tgUser.username || "Telegram User";
+        const currentScore = window.userScore || 0;
+        syncScore(identifier, name, currentScore);
+    }
+    loadLeaderboard();
+});
 </script></body></html>
