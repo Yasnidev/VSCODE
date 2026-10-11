@@ -34,7 +34,6 @@ header{display:flex;justify-content:space-between;align-items:center;gap:8px;mar
 .kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .kp div{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}
 .kp small{display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px}.kp b{font-size:15px}
-#feed{font-size:12px;color:var(--mut);text-align:center;margin-top:10px;height:16px;transition:opacity .4s}
 .orbw{position:relative;width:210px;height:210px;margin:6px auto;display:grid;place-items:center}
 .halo{position:absolute;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(153,69,255,.55),transparent 70%);animation:pulse 2.4s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.25);opacity:.6}}
@@ -67,8 +66,6 @@ canvas.cv{width:100%;height:84px;display:block}
 .tabs button{flex:1;background:none;border:0;border-radius:14px;padding:7px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--mut);transition:all .2s}
 .tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .tabs button.on{background:linear-gradient(135deg,rgba(153,69,255,.5),rgba(20,241,149,.25));color:var(--txt)}
-.surge{position:fixed;right:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:25;display:none;background:linear-gradient(90deg,var(--gold),#ff9d2e);color:#2a1700;border:0;border-radius:99px;padding:12px 18px;font-weight:800;box-shadow:0 0 30px rgba(255,210,74,.7);animation:pl .8s infinite alternate}
-@keyframes pl{to{transform:scale(1.08)}}
 #toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:40;display:grid;gap:6px;width:min(92%,420px)}
 #toast div{background:var(--card2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--g);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600;animation:in .3s both,out .4s 2.6s forwards}
 @keyframes out{to{opacity:0;transform:translateY(-10px)}}
@@ -117,7 +114,6 @@ h3{color:var(--c);letter-spacing:2.5px;font-size:10px}h3:before{content:"// "}
 <button class="btn o" id="wallet">Conectar billetera</button></header>
 <div class="hero"><div class="bal"><small>Energía en juego</small><div class="n" id="bal">0</div></div>
 <div class="kp"><div><small>Por segundo</small><b id="rate">0</b></div><div><small>Multiplicador</small><b id="mult">x1</b></div><div><small>Cristales</small><b id="cr">0</b></div></div>
-<div id="feed" style="display:none;"></div>
 <div id="view"></div>
 </div>
 <div class="tabs"><div id="nav"></div></div>
@@ -142,7 +138,6 @@ const UP=[
 {id:'o1',n:'Baterías de reserva',d:'Minería offline hasta 24 h',c:5000,t:'o',v:24,k:'🔋'}];
 const MI=[{id:'m1',n:'Toca el núcleo 100 veces',g:100,k:'clicks',rw:150},{id:'m2',n:'Mina 5.000 $FORGE',g:5000,k:'total',rw:400},{id:'m3',n:'Ten 15 niveles de mineros',g:15,k:'lvs',rw:800}];
 const HITOS=[10,25,50,100,200];
-const BOTS=['SolWhale','NeonMiner','Kira.sol','PixelFox','HashQueen','Orbit99','Zeta','Mango','Luna_X'];
 const RC={'Común':'#9690c0','Poco común':'#4cc9f0','Raro':'#ffd24a','Épico':'#c77dff','Legendario':'#ff5a7a'};
 let S={claimed:0,cday:'',lastClaim:0,burned:0,bal:0,pend:0,total:0,clicks:0,cr:0,lv:{},up:{},ms:{},base:{clicks:0,total:0},day:'',wallet:null,last:Date.now(),hist:[]};
 try{const d=localStorage.getItem('fm3')||localStorage.getItem('fm2');if(d)S=Object.assign(S,JSON.parse(d))}catch(e){}
@@ -158,9 +153,8 @@ const lvs=()=>Object.values(S.lv).reduce((a,b)=>a+b,0);
 const gm=()=>(1+S.cr*.05)*UP.filter(u=>u.t==='g'&&S.up[u.id]).reduce((a,u)=>a*u.v,1);
 const rate=()=>M.reduce((a,m)=>a+m.r*S.lv[m.id]*mm(m),0)*gm();
 const cp=()=>(1+Math.floor(rate()/20))*UP.filter(u=>u.t==='c'&&S.up[u.id]).reduce((a,u)=>a*u.v,1)*(1+S.cr*.05);
-// Economía: Energía (ilimitada, dentro del juego) vs $FORGE (token, escaso)
 const CAP=500,MINC=50,CD=3600000,BURN=.05;
-const emi=()=>Math.max(.25,1/(1+S.total/2e6))*.1;           // emisión decreciente
+const emi=()=>Math.max(.25,1/(1+S.total/2e6))*.1;
 const claimable=()=>Math.max(0,Math.min(S.pend,CAP-S.claimed));
 const cdLeft=()=>Math.max(0,S.lastClaim+CD-Date.now());
 if(S.cday!==new Date().toDateString()){S.cday=new Date().toDateString();S.claimed=0}
@@ -226,7 +220,7 @@ function view(){
   return `<div class="card"><div class="it"><div class="t"><b>${m.n}</b><span>Recompensa: ${m.rw} $FORGE</span></div>
   <button class="btn g" data-ms="${m.id}" ${d&&!c?'':'disabled'}>${c?'Reclamada ✓':'Reclamar'}</button></div>
   <div class="bar"><i style="width:${p/m.g*100}%"></i></div><div class="row"><span>${fmt(p)} / ${fmt(m.g)}</span><span>Se reinicia a diario</span></div></div>`}).join('');
- if(tab==='rk'){const me=S.total,L=BOTS.map((n,i)=>({n,s:Math.max(me*(1.6-i*.16),500*(9-i))})).concat([{n:S.wallet?short(S.wallet):'Tú',s:me,me:1}]).sort((a,b)=>b.s-a.s);
+ if(tab==='rk'){const me=S.total,L=[{n:'SolWhale',s:me*1.5},{n:'NeonMiner',s:me*1.3},{n:'Kira.sol',s:me*1.1},{n:S.wallet?short(S.wallet):'Tú',s:me,me:1}].sort((a,b)=>b.s-a.s);
   h=`<div class="card">${L.map((x,i)=>`<div class="rk ${x.me?'me':''}"><em>${i+1}</em><span>${x.n}</span><b>${fmt(x.s)}</b></div>`).join('')}</div><div class="row" style="justify-content:center">Ranking simulado · Temporada 1</div>`}
  if(tab==='tk'){const D=[['Jugadores (minería)',40,'#14f195'],['Liquidez',20,'#9945ff'],['Equipo (con vesting)',15,'#4cc9f0'],['Ecosistema',15,'#ffd24a'],['Reserva',10,'#ff5a7a']];let o=0;
   h=`<div class="card"><h3>Distribución propuesta</h3><div class="it"><svg width="130" height="130" viewBox="0 0 36 36" style="flex:none;transform:rotate(-90deg)">${D.map(d=>{const s=`<circle cx="18" cy="18" r="15.9155" fill="none" stroke="${d[2]}" stroke-width="4.5" stroke-dasharray="${d[1]-1} ${101-d[1]}" stroke-dashoffset="${-o}"/>`;o+=d[1];return s}).join('')}</svg>
@@ -241,9 +235,7 @@ function upd(){
  $('wallet').textContent=S.wallet?short(S.wallet):'Conectar billetera';
  if(tab==='mine'){$('cpw').textContent=fmt(cp());$('pend').textContent=fmt(S.pend);
   const p=Math.min(S.pend/MINC,1);$('ringp').style.strokeDashoffset=213.6*(1-p);$('ringt').textContent=Math.floor(p*100)+'%';
-  const cd=cdLeft();$('claim').disabled=!(S.pend>=MINC&&S.wallet&&!cd&&S.claimed<CAP);
-  $('claim').textContent=!S.wallet?'Conecta tu billetera':cd?'Enfriamiento '+Math.ceil(cd/60000)+' min':S.claimed>=CAP?'Límite diario alcanzado':S.pend<MINC?'Mínimo '+MINC+' $FORGE':'Reclamar a mi billetera';
-  $('eco').innerHTML='<span>Hoy '+fmt(S.claimed)+'/'+CAP+'</span><span>Emisión '+Math.round(emi()/.1*100)+'%</span><span>🔥 '+fmt(S.burned)+'</span>';draw()}
+  const cd=cdLeft();$('claim').disabled=!(S.pend>=MINC&&S.wallet&&!cd&&S.claimed<CAP);$('claim').textContent=!S.wallet?'Conecta tu billetera':cd?'Enfriamiento '+Math.ceil(cd/60000)+' min':S.claimed>=CAP?'Límite diario alcanzado':S.pend<MINC?'Mínimo '+MINC+' $FORGE':'Reclamar a mi billetera';$('eco').innerHTML='<span>Hoy '+fmt(S.claimed)+'/'+CAP+'</span><span>Emisión '+Math.round(emi()/.1*100)+'%</span><span>🔥 '+fmt(S.burned)+'</span>';draw()}
 }
 function draw(){const c=$('cv');if(!c)return;const d=devicePixelRatio||1,w=c.clientWidth*d,h=c.clientHeight*d;if(c.width!==w){c.width=w;c.height=h}
  const x=c.getContext('2d');x.clearRect(0,0,w,h);x.strokeStyle='rgba(150,144,192,.15)';x.lineWidth=1;for(let i=1;i<4;i++){x.beginPath();x.moveTo(0,h*i/4);x.lineTo(w,h*i/4);x.stroke()}
@@ -259,8 +251,8 @@ document.addEventListener('click',e=>{const t=e.target;
  if(t.closest('#orb')){const g=cp();add(g);S.clicks++;const p=document.createElement('div');p.className='pop';p.textContent='+'+fmt(g);p.style.left=(e.clientX-12)+'px';p.style.top=(e.clientY-30)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),850);burst(e.clientX,e.clientY);upd();afford();return}
  let b=t.closest('[data-q]');if(b){q=+b.dataset.q;view();return}
  b=t.closest('[data-m]');if(b){const m=M.find(x=>x.id===b.dataset.m),c=bulk(m);if(S.bal>=c){const old=HITOS.filter(h=>S.lv[m.id]>=h).length;S.bal-=c;S.lv[m.id]+=q;if(HITOS.filter(h=>S.lv[m.id]>=h).length>old)toast('🎉 ¡Hito alcanzado! '+m.n+' produce x2');dB=Math.min(dB,S.bal);view();save()}return}
- b=t.closest('[data-u]');if(b){const u=UP.find(x=>x.id===b.dataset.u);if(S.bal>=u.c){S.bal-=u.c;S.up[u.id]=1;toast('✅ '+u.n+' activada');view();save()}return}
- b=t.closest('[data-ms]');if(b){const m=MI.find(x=>x.id===b.dataset.ms);S.ms[m.id]=1;add(m.rw);toast('🎯 +'+m.rw+' $FORGE');view();save();return}
+ b=t.closest('[data-u]');if(b){const u=UP.filter(x=>x.id===b.dataset.u)[0];if(S.bal>=u.c){S.bal-=u.c;S.up[u.id]=1;toast('✅ '+u.n+' activada');view();save()}return}
+ b=t.closest('[data-ms]');if(b){const m=MI.filter(x=>x.id===b.dataset.ms)[0];S.ms[m.id]=1;add(m.rw);toast('🎯 +'+m.rw+' $FORGE');view();save();return}
  if(t.closest('#claim')){const l=claimable();if(l<=0||cdLeft())return;const bn=l*BURN;S.pend-=l;S.claimed+=l;S.lastClaim=Date.now();S.burned+=bn;toast('✅ Demo: se enviarían '+fmt(l-bn)+' $FORGE a '+short(S.wallet)+' · 🔥 '+fmt(bn)+' quemados');upd();save();return}
  if(t.closest('#asc')){const nc=Math.floor(Math.sqrt(S.total/1e4));if(nc>S.cr&&confirm('¿Ascender? Reinicias mineros y mejoras, pero ganas '+(nc-S.cr)+' 💎')){S.cr=nc;S.bal=0;dB=0;S.up={};M.forEach(m=>S.lv[m.id]=0);toast('💎 ¡Has ascendido!');view();save()}return}
 });
@@ -269,12 +261,10 @@ $('wallet').onclick=async()=>{
  const p=(window.phantom&&window.phantom.solana)||window.solana;
  if(p&&p.isPhantom){try{const r=await p.connect();S.wallet=r.publicKey.toString()}catch(e){return}}
  else{S.wallet='DemoWa11etSo1anaAddr3ssX9fK2';toast('Modo demo: instala Phantom para conectar una billetera real')}
- view();save()};
-setInterval(()=>{add(rate());S.hist.push(rate());if(S.hist.length>60)S.hist.shift();upd();afford();save()},1000);
+ view();save();
+};
+setInterval(()=>{const f=rate();if(f>0){add(f);S.hist.push(f);if(S.hist.length>60)S.hist.shift();upd();afford();save()}},1000);
 (function loop(){dB+=(S.bal-dB)*.18;if(Math.abs(S.bal-dB)<.05)dB=S.bal;$('bal').textContent=fmt(dB);requestAnimationFrame(loop)})();
-// Fondo de partículas
-(function(){const c=$('bg'),x=c.getContext('2d');let w,h,P=[];function rs(){const d=devicePixelRatio||1;w=c.width=innerWidth*d;h=c.height=innerHeight*d;P=Array.from({length:REDUCE?0:55},()=>({x:Math.random()*w,y:Math.random()*h,r:(.6+Math.random()*1.8)*d,v:(.1+Math.random()*.35)*d,c:Math.random()<.5?'153,69,255':'20,241,149'}))}
-rs();addEventListener('resize',rs);(function f(){x.clearRect(0,0,w,h);P.forEach(p=>{p.y-=p.v;if(p.y<-5){p.y=h+5;p.x=Math.random()*w}x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fillStyle='rgba('+p.c+',.55)';x.fill()});requestAnimationFrame(f)})()})();
 view();
-if(awayG>1)toast('⛏️ Mientras no estabas minaste '+fmt(awayG)+' $FORGE');
+if(awayG>1)toast('💤 Mientras no estabas minaste '+fmt(awayG)+' $FORGE');
 </script></body></html>
