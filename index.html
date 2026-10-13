@@ -3,8 +3,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap">
 <title>ForgeMine — Idle Mining en Robinhood Chain</title>
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <style>
+
 :root{--bg:#07050f;--card:rgba(24,19,45,.72);--card2:rgba(40,32,78,.55);--line:rgba(153,69,255,.28);--txt:#f1eeff;--mut:#9690c0;--p:#9945ff;--g:#14f195;--gold:#ffd24a;--red:#ff5a7a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f1edff;--card:rgba(255,255,255,.8);--card2:rgba(240,234,255,.8);--line:rgba(120,70,220,.25);--txt:#1b1535;--mut:#6a6194;--g:#0aa66a}}
 :root[data-theme="dark"]{--bg:#07050f}
@@ -105,292 +107,387 @@ h3{color:var(--c);letter-spacing:2.5px;font-size:10px}h3:before{content:"// "}
 .glow.a{background:#00b8ff;opacity:.28}
 .orb{box-shadow:0 0 40px rgba(138,77,255,.75),0 0 90px rgba(0,240,255,.25),inset 0 -12px 28px rgba(0,0,0,.4),inset 0 8px 14px rgba(255,255,255,.25)}
 .rk{font-weight:600}
+
+
+/* ===== v4: perfil, tienda, staking, activación ===== */
+.gated .hero,.gated .tabs{display:none}
+.tabs div{overflow-x:auto;scrollbar-width:none}.tabs div::-webkit-scrollbar{display:none}
+.tabs button{flex:1 0 58px}
+label{display:block;font-size:11px;color:var(--c);letter-spacing:1.5px;text-transform:uppercase;margin:12px 0 5px;font-family:Orbitron,sans-serif}
+input,select{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:2px;color:var(--txt);padding:11px 12px;font:inherit;font-size:16px;outline:0}
+input:focus,select:focus{border-color:var(--c);box-shadow:0 0 0 2px rgba(0,240,255,.15)}
+select option{background:#111;color:#fff}
+.note{font-size:12px;color:var(--mut);line-height:1.45}
+.chip{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:2px 8px;border-radius:2px;font-family:Orbitron,sans-serif}
+.chip.on{background:rgba(20,241,149,.16);color:var(--g)}.chip.off{background:rgba(255,90,122,.16);color:var(--red)}
+.led{animation:blink 1.4s infinite}
+.tile.off svg{filter:grayscale(.95) brightness(.55)}.tile.off:after{background:var(--red);box-shadow:0 0 6px var(--red)}
+.lock{opacity:.78;border-left:3px solid var(--gold)!important}
+.gen{border-left:3px solid var(--gold)!important;box-shadow:0 0 22px rgba(255,210,74,.18),inset 0 0 28px rgba(255,210,74,.06)}
+.btn.sm{padding:7px 10px;font-size:11px}
+.two{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.two .btn{flex:1;min-width:120px}
+.warn{border-left:3px solid var(--gold)!important}
+.stkrow{display:flex;gap:8px}.stkrow input{flex:1}
+@media (max-width:380px){.kp b{font-size:13px}}
 </style></head><body>
-<canvas id="bg"></canvas><div class="glow a"></div><div class="glow b"></div>
-<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9945ff"/><stop offset="1" stop-color="#14f195"/></linearGradient></defs></svg>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a4dff"/><stop offset="1" stop-color="#14f195"/></linearGradient></defs></svg>
+<div class="glow a"></div><div class="glow b"></div>
 <div id="toast"></div>
 <div class="wrap">
 <header><div class="logo"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="url(#rg)"/><path d="M12 36L32 16M24 10c8-1 15 4 16 12-4-5-8-6-13-5z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-<div>FORGE<b>MINE</b><span class="net" id="netl"><i></i>Sistema en línea · Robinhood Chain Testnet</span></div></div>
+<div>FORGE<b>MINE</b><span class="net" id="netl"></span></div></div>
 <button class="btn o" id="wallet">Conectar billetera</button></header>
-<div class="hero"><div class="bal"><small>Energía en juego</small><div class="n" id="bal">0</div></div>
-<div class="kp"><div><small>Por segundo</small><b id="rate">0</b></div><div><small>Multiplicador</small><b id="mult">x1</b></div><div><small>Cristales</small><b id="cr">0</b></div></div>
+<div class="hero" id="hero"><div class="bal"><small>Energía en juego</small><div class="n" id="bal">0</div></div>
+<div class="kp"><div><small>Por segundo</small><b id="rate">0</b></div><div><small>Poder total</small><b id="pow">0</b></div><div><small>Cristales</small><b id="cr">0</b></div></div></div>
 <div id="view"></div>
-</div>
 <div class="tabs"><div id="nav"></div></div>
+</div>
 
 <script>
+'use strict';
 const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
-// ===== Red: Robinhood Chain =====
+
+// ===================== CONFIGURACIÓN =====================
+const CFG={
+ net:'mainnet',                 // 'mainnet' (Robinhood Chain) o 'testnet'
+ FORGE_ADDRESS:'',              // dirección del token FORGE (0x...) tras desplegarlo
+ SHOP_ADDRESS:'',               // dirección del contrato ForgeShop (0x...) tras desplegarlo
+ FORGE_USD:0.01,                // precio de 1 FORGE en USD (ajústalo al precio real al lanzar)
+ ETH_USD:2500,                  // precio de 1 ETH en USD (ajústalo al lanzar)
+ MIN_CLAIM_USD:1,               // retiro mínimo: 1 dólar en FORGE
+ BASE_CAP:100,                  // límite diario base de FORGE (debe ser >= retiro mínimo en FORGE)
+ CAP_PER_INVEST:0.005,          // el límite diario sube 0.5% de lo invertido (tienda + staking)
+ GEN_USD:100,                   // dólares en FORGE en staking para desbloquear el minero Génesis
+ SHOP_DISCOUNT:0.10,            // descuento por pagar la tienda con FORGE
+ STAKE_PLANS:[{d:7,r:.004},{d:14,r:.005},{d:30,r:.006}], // % diario estimado por plan, se paga al final
+ SUPA_URL:'https://wvkkgyyjrumfdcpzzcug.supabase.co',
+ SUPA_KEY:'sb_publishable_Q-korJ9cVAfTvbGywuYj4w_bVuoxV1R'
+};
 const NETS={
  testnet:{id:46630,hex:'0xb626',name:'Robinhood Chain Testnet',rpc:'https://rpc.testnet.chain.robinhood.com',ex:'https://explorer.testnet.chain.robinhood.com'},
  mainnet:{id:4663,hex:'0x1237',name:'Robinhood Chain',rpc:'https://rpc.mainnet.chain.robinhood.com',ex:'https://robinhoodchain.blockscout.com'}};
-const NET=NETS.testnet; // al lanzar en producción cambia a NETS.mainnet
-const FORGE_ADDRESS=''; // pega aquí la dirección del contrato FORGE cuando lo despliegues (0x...)
-// ===== Datos =====
+const NET=NETS[CFG.net];
+const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY):null;
+const DAY=864e5,BURN=.05,CD=3600000,GROW=1.15;
+const SHOP_ABI=['function buyWithEth(uint256 itemId) payable','function buyWithForge(uint256 itemId)'];
+const TOKEN_ABI=['function approve(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)'];
+
+// ===================== DATOS =====================
 const M=[
-{id:'cpu',n:'Minero CPU',b:10,r:.2,a:'#c9c3ee',z:'#8b84b0',rar:'Común'},
-{id:'gpu',n:'Granja GPU',b:80,r:1.5,a:'#14f195',z:'#0aa66a',rar:'Común'},
-{id:'rack',n:'Rack de Servidores',b:500,r:8,a:'#4cc9f0',z:'#4361ee',rar:'Poco común'},
-{id:'asic',n:'ASIC Turbo',b:3000,r:40,a:'#ffd24a',z:'#ff9d2e',rar:'Raro'},
-{id:'farm',n:'Granja Solar',b:20000,r:200,a:'#ffb703',z:'#fb5607',rar:'Raro'},
-{id:'qtm',n:'Reactor Cuántico',b:150000,r:1000,a:'#e0aaff',z:'#9945ff',rar:'Épico'},
-{id:'fus',n:'Planta de Fusión',b:1.2e6,r:5500,a:'#ff9e7a',z:'#ff5a7a',rar:'Épico'},
-{id:'sing',n:'Singularidad',b:1e7,r:30000,a:'#ffffff',z:'#9945ff',rar:'Legendario'}];
+{id:'cpu',n:'Nodo CPU',b:15,r:.15,a:'#c9c3ee',z:'#8b84b0',rar:'Común'},
+{id:'gpu',n:'Rig GPU',b:120,r:1,a:'#14f195',z:'#0aa66a',rar:'Común'},
+{id:'mini',n:'Mini ASIC',b:700,r:4.5,a:'#6ee7ff',z:'#2d8cff',rar:'Poco común'},
+{id:'rack',n:'Rack de Servidores',b:4000,r:22,a:'#4cc9f0',z:'#4361ee',rar:'Poco común'},
+{id:'asic',n:'ASIC Turbo',b:22000,r:110,a:'#ffd24a',z:'#ff9d2e',rar:'Raro'},
+{id:'imm',n:'Cluster de Inmersión',b:130000,r:560,a:'#7af7d8',z:'#00a896',rar:'Raro'},
+{id:'farm',n:'Granja Solar',b:8e5,r:2800,a:'#ffb703',z:'#fb5607',rar:'Épico'},
+{id:'sat',n:'Estación Orbital',b:5e6,r:14000,a:'#b8c0ff',z:'#7b2cbf',rar:'Épico'},
+{id:'qtm',n:'Reactor Cuántico',b:4e7,r:70000,a:'#e0aaff',z:'#9945ff',rar:'Legendario'},
+{id:'fus',n:'Planta de Fusión',b:3.5e8,r:340000,a:'#ff9e7a',z:'#ff5a7a',rar:'Legendario'},
+{id:'sing',n:'Singularidad',b:3e9,r:1.6e6,a:'#ffffff',z:'#9945ff',rar:'Mítico'},
+{id:'gen',n:'Nodo Génesis',b:2.5e10,r:1.2e7,a:'#fff1a8',z:'#ffb703',rar:'Génesis',lock:true}];
 const UP=[
-{id:'u1',n:'Dedos de acero',d:'Toque x2',c:200,t:'c',v:2,k:'👆'},{id:'u2',n:'Guantes de nano-carbono',d:'Toque x3',c:2500,t:'c',v:3,k:'🧤'},
-{id:'u3',n:'Pulso cuántico',d:'Toque x5',c:30000,t:'c',v:5,k:'💥'},
-{id:'g1',n:'Refrigeración líquida',d:'Producción x1.25',c:1000,t:'g',v:1.25,k:'❄️'},{id:'g2',n:'Overclock seguro',d:'Producción x1.5',c:20000,t:'g',v:1.5,k:'🚀'},
-{id:'g3',n:'Red de validadores',d:'Producción x2',c:500000,t:'g',v:2,k:'🛰️'},
-{id:'o1',n:'Baterías de reserva',d:'Minería offline hasta 24 h',c:5000,t:'o',v:24,k:'🔋'}];
-const MI=[{id:'m1',n:'Toca el núcleo 100 veces',g:100,k:'clicks',rw:150},{id:'m2',n:'Mina 5.000 $FORGE',g:5000,k:'total',rw:400},{id:'m3',n:'Ten 15 niveles de mineros',g:15,k:'lvs',rw:800}];
+{id:'u1',n:'Dedos de acero',d:'Toque x2',c:300,t:'c',v:2,k:'👆'},{id:'u2',n:'Guantes de nano-carbono',d:'Toque x2',c:6000,t:'c',v:2,k:'🧤'},
+{id:'u3',n:'Pulso cuántico',d:'Toque x3',c:1e5,t:'c',v:3,k:'💥'},{id:'u4',n:'Núcleo táctil',d:'Toque x3',c:2e6,t:'c',v:3,k:'🔘'},
+{id:'u5',n:'Manos de plasma',d:'Toque x4',c:4e7,t:'c',v:4,k:'🔥'},
+{id:'g1',n:'Refrigeración líquida',d:'Producción x1.15',c:1500,t:'g',v:1.15,k:'❄️'},{id:'g2',n:'Overclock seguro',d:'Producción x1.2',c:3e4,t:'g',v:1.2,k:'🚀'},
+{id:'g3',n:'Cableado superconductor',d:'Producción x1.25',c:6e5,t:'g',v:1.25,k:'🔌'},{id:'g4',n:'Red de validadores',d:'Producción x1.3',c:1.2e7,t:'g',v:1.3,k:'🛰️'},
+{id:'g5',n:'IA de optimización',d:'Producción x1.4',c:2.5e8,t:'g',v:1.4,k:'🧠'},{id:'g6',n:'Reactor auxiliar',d:'Producción x1.5',c:5e9,t:'g',v:1.5,k:'⚛️'},
+{id:'o1',n:'Baterías de reserva',d:'Minería offline hasta 12 h',c:8000,t:'o',v:12,k:'🔋'},{id:'o2',n:'Baterías avanzadas',d:'Minería offline hasta 24 h',c:2e5,t:'o',v:24,k:'🔌'}];
+const MI=[
+{id:'m1',n:'Toca el núcleo 100 veces',g:100,k:'clicks',rw:5},
+{id:'m2',n:'Mina 5.000 de energía',g:5000,k:'total',rw:10},
+{id:'m3',n:'Ten 15 niveles de mineros',g:15,k:'lvs',rw:20},
+{id:'m4',n:'Activa tus mineros hoy',g:1,k:'act',rw:30},
+{id:'m5',n:'Mantén un staking activo',g:1,k:'stk',rw:50}];
+const SHOP=[
+{id:'e1',n:1,name:'Pack de energía S',d:'30 min de tu producción',usd:2,k:'⚡'},
+{id:'e2',n:2,name:'Pack de energía L',d:'6 h de tu producción',usd:10,k:'🔋'},
+{id:'b1',n:3,name:'Boost x1.5 (24 h)',d:'Producción x1.5 durante 24 h',usd:4,k:'🚀'},
+{id:'b2',n:4,name:'Boost x2 (24 h)',d:'Producción x2 durante 24 h',usd:9,k:'💥'},
+{id:'a1',n:5,name:'Auto-activador 7 días',d:'Tus mineros se activan solos 7 días',usd:12,k:'⏻'},
+{id:'c1',n:6,name:'Cristal',d:'+1 💎 (+5% a todo)',usd:15,k:'💎'}];
 const HITOS=[10,25,50,100,200];
-const RC={'Común':'#9690c0','Poco común':'#4cc9f0','Raro':'#ffd24a','Épico':'#c77dff','Legendario':'#ff5a7a'};
-let S={claimed:0,cday:'',lastClaim:0,burned:0,bal:0,pend:0,total:0,clicks:0,cr:0,lv:{},up:{},ms:{},base:{clicks:0,total:0},day:'',wallet:null,last:Date.now(),hist:[]};
-try{const d=localStorage.getItem('fm3')||localStorage.getItem('fm2');if(d)S=Object.assign(S,JSON.parse(d))}catch(e){}
-M.forEach(m=>S.lv[m.id]=S.lv[m.id]||0);
-if(S.wallet&&!/^0x/i.test(S.wallet))S.wallet=null; // migración: ya no se usan direcciones de Solana
-const today=new Date().toDateString();
-if(S.day!==today){S.day=today;S.ms={};S.base={clicks:S.clicks,total:S.total}}
+const RC={'Común':'#9690c0','Poco común':'#4cc9f0','Raro':'#ffd24a','Épico':'#c77dff','Legendario':'#ff5a7a','Mítico':'#ffffff','Génesis':'#ffd24a'};
+const CC='MX US CA AR BR CL CO PE VE EC BO PY UY CR PA GT HN SV NI DO CU PR ES PT FR DE IT GB IE NL BE CH AT SE NO DK FI PL CZ RO GR TR UA RU IN CN JP KR PH ID TH VN MY SG AU NZ ZA NG EG MA KE SA AE IL PK BD'.split(' ');
+const flagOf=cc=>String.fromCodePoint(...[...String(cc).toUpperCase()].map(c=>127397+c.charCodeAt(0)));
+let dn=null;try{dn=new Intl.DisplayNames(['es'],{type:'region'})}catch(e){}
+const COUNTRIES=CC.map(cc=>({cc,f:flagOf(cc),n:dn?dn.of(cc):cc})).sort((a,b)=>a.n.localeCompare(b.n,'es'));
+
+// ===================== ESTADO (uno por billetera) =====================
+const defS=()=>({v:4,bal:0,pend:0,total:0,clicks:0,cr:0,lv:{},up:{},ms:{},base:{clicks:0,total:0},day:'',actDay:'',last:Date.now(),hist:[],act:{},burned:0,claimed:0,lastClaim:0,emitDay:0,stakes:[],invested:0,boost:{x:1,until:0},auto:0,profile:null,mailSent:false});
+let S=defS(),WALLET=null,tab='mine',q=1,chainBal=null,prevOn=false,rankCache=null,rankAt=0;
 const $=id=>document.getElementById(id);
-const fmt=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'K':n.toFixed(n<100?1:0);
-const cst=(m,i=0)=>Math.floor(m.b*Math.pow(1.15,S.lv[m.id]+i));
-let q=1;const bulk=m=>{let c=0;for(let i=0;i<q;i++)c+=cst(m,i);return c};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n>=1e12?(n/1e12).toFixed(2)+'T':n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'K':n.toFixed(n<100?1:0);
+const short=a=>a&&a.length>10?a.slice(0,6)+'…'+a.slice(-4):(a||'');
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function cdText(ms){const s=Math.max(0,Math.floor(ms/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?d+'d '+h+'h '+m+'m':h?h+'h '+m+'m '+(s%60)+'s':m+'m '+(s%60)+'s'}
+function toast(t){const d=document.createElement('div');d.textContent=t;$('toast').appendChild(d);setTimeout(()=>d.remove(),3100)}
+const ready=()=>!!(WALLET&&S.profile);
+
+function rollDay(){const t=new Date().toDateString();if(S.day!==t){S.day=t;S.ms={};S.base={clicks:S.clicks,total:S.total};S.claimed=0;S.emitDay=0}}
+function loadFor(w){WALLET=w.toLowerCase();let d=null;try{d=JSON.parse(lsGet('fm4:'+WALLET))}catch(e){}
+ S=Object.assign(defS(),d||{});S.lv=S.lv||{};M.forEach(m=>S.lv[m.id]=S.lv[m.id]||0);lsSet('fm_last',WALLET);rollDay();
+ const g=offline();if(g>1)setTimeout(()=>toast('💤 Mientras no estabas minaste '+fmt(g)+' de energía'),600);refreshOnchain()}
+function save(){if(!WALLET)return;S.last=Date.now();lsSet('fm4:'+WALLET,JSON.stringify(S))}
+
+// ===================== ECONOMÍA =====================
+const cst=(m,i=0)=>Math.floor(m.b*Math.pow(GROW,S.lv[m.id]+i));
+const bulk=m=>{let c=0;for(let i=0;i<q;i++)c+=cst(m,i);return c};
 const mm=m=>Math.pow(2,HITOS.filter(h=>S.lv[m.id]>=h).length);
 const lvs=()=>Object.values(S.lv).reduce((a,b)=>a+b,0);
-const gm=()=>(1+S.cr*.05)*UP.filter(u=>u.t==='g'&&S.up[u.id]).reduce((a,u)=>a*u.v,1);
-const rate=()=>M.reduce((a,m)=>a+m.r*S.lv[m.id]*mm(m),0)*gm();
-const cp=()=>(1+Math.floor(rate()/20))*UP.filter(u=>u.t==='c'&&S.up[u.id]).reduce((a,u)=>a*u.v,1)*(1+S.cr*.05);
-const CAP=500,MINC=50,CD=3600000,BURN=.05;
-const emi=()=>Math.max(.25,1/(1+S.total/2e6))*.1;
-const claimable=()=>Math.max(0,Math.min(S.pend,CAP-S.claimed));
+const boostOn=()=>S.boost&&S.boost.until>Date.now();
+const gmBase=()=>(1+S.cr*.05)*UP.filter(u=>u.t==='g'&&S.up[u.id]).reduce((a,u)=>a*u.v,1);
+const gm=()=>gmBase()*(boostOn()?S.boost.x:1);
+const expiry=m=>Math.max(S.act[m.id]||0,S.auto||0);
+const isAct=m=>S.lv[m.id]>0&&expiry(m)>Date.now();
+const power=()=>M.reduce((a,m)=>a+m.r*S.lv[m.id]*mm(m),0)*gmBase();
+const rate=()=>M.reduce((a,m)=>a+(isAct(m)?m.r*S.lv[m.id]*mm(m):0),0)*gm();
+const cp=()=>(1+Math.floor(power()/20))*UP.filter(u=>u.t==='c'&&S.up[u.id]).reduce((a,u)=>a*u.v,1)*(1+S.cr*.05);
+const staked=()=>S.stakes.reduce((a,s)=>a+s.amt,0);
+const invested=()=>S.invested+staked();
+const dailyCap=()=>CFG.BASE_CAP+CFG.CAP_PER_INVEST*invested();
+const minClaim=()=>Math.ceil(CFG.MIN_CLAIM_USD/CFG.FORGE_USD);
+const genOK=()=>staked()*CFG.FORGE_USD>=CFG.GEN_USD;
+const emi=()=>Math.max(.25,1/(1+S.total/2e6))*.01;
 const cdLeft=()=>Math.max(0,S.lastClaim+CD-Date.now());
-if(S.cday!==new Date().toDateString()){S.cday=new Date().toDateString();S.claimed=0}
-function add(g){S.bal+=g;S.total+=g;S.pend+=g*emi()}
-const away=Math.min((Date.now()-S.last)/1000,S.up.o1?86400:28800);
-const awayG=away>5?away*rate():0;
-if(awayG>0)add(awayG);
-function save(){S.last=Date.now();try{localStorage.setItem('fm3',JSON.stringify(S))}catch(e){}}
-const prog=k=>k==='lvs'?lvs():k==='clicks'?S.clicks-S.base.clicks:S.total-S.base.total;
-const short=a=>a.length>10?a.slice(0,6)+'…'+a.slice(-4):a;
-const afford=()=>document.querySelectorAll('[data-cost]').forEach(b=>b.disabled=S.bal<+b.dataset.cost);
-function toast(t){const d=document.createElement('div');d.textContent=t;$('toast').appendChild(d);setTimeout(()=>d.remove(),3100)}
+const claimRoom=()=>Math.max(0,dailyCap()-S.claimed);
+function add(g){S.bal+=g;S.total+=g;const room=Math.max(0,dailyCap()-S.emitDay),x=Math.min(room,g*emi());S.pend+=x;S.emitDay+=x}
+function offline(){const now=Date.now(),cap=(S.up.o2?86400:S.up.o1?43200:28800)*1000,from=Math.max(S.last,now-cap);let g=0;
+ M.forEach(m=>{if(S.lv[m.id]>0){const secs=Math.max(0,Math.min(now,expiry(m))-from)/1000;if(secs>5)g+=m.r*S.lv[m.id]*mm(m)*gmBase()*secs}});
+ if(g>0)add(g);return g}
+function activate(ids){const t=Date.now()+DAY;let n=0;M.forEach(m=>{if(S.lv[m.id]>0&&(!ids||ids.includes(m.id))){S.act[m.id]=t;n++}});if(n){S.actDay=S.day;toast('⏻ '+n+(n>1?' mineros activados':' minero activado')+' por 24 h')}else toast('Aún no tienes mineros que activar');save()}
+const prog=k=>k==='lvs'?lvs():k==='clicks'?S.clicks-S.base.clicks:k==='act'?(S.actDay===S.day?1:0):k==='stk'?(S.stakes.length?1:0):S.total-S.base.total;
+const ethP=it=>(it.usd/CFG.ETH_USD).toFixed(6);
+const forgeP=it=>Math.ceil(it.usd*(1-CFG.SHOP_DISCOUNT)/CFG.FORGE_USD);
+function applyItem(it){const now=Date.now();
+ if(it.id==='e1')add(Math.max(power()*1800,500));
+ if(it.id==='e2')add(Math.max(power()*21600,3000));
+ if(it.id==='b1'&&!(boostOn()&&S.boost.x>1.5))S.boost={x:1.5,until:now+DAY};
+ if(it.id==='b2')S.boost={x:2,until:now+DAY};
+ if(it.id==='a1')S.auto=Math.max(S.auto||0,now)+7*DAY;
+ if(it.id==='c1')S.cr+=1;
+ S.invested+=it.usd/CFG.FORGE_USD}
 
-// ===== Ilustraciones SVG =====
+// ===================== ILUSTRACIONES =====================
 let uid=0;
 const G={
 cpu:'<rect x="15" y="15" width="18" height="18" rx="3"/><path d="M20 9v6M28 9v6M20 33v6M28 33v6M9 20h6M9 28h6M33 20h6M33 28h6"/><rect x="21" y="21" width="6" height="6"/>',
 gpu:'<rect x="7" y="15" width="34" height="18" rx="3"/><circle cx="19" cy="24" r="5.5"/><circle cx="32" cy="24" r="3.2"/><path d="M19 20v8M15 24h8"/>',
+mini:'<rect x="12" y="14" width="24" height="20" rx="3"/><path d="M17 20h14M17 24h14M17 28h8"/><path d="M12 19H8M12 29H8M36 19h4M36 29h4"/>',
 rack:'<rect x="10" y="8" width="28" height="9" rx="2"/><rect x="10" y="19" width="28" height="9" rx="2"/><rect x="10" y="30" width="28" height="9" rx="2"/><path d="M14 12.5h5M14 23.5h5M14 34.5h5M32 12.5h2M32 23.5h2M32 34.5h2"/>',
 asic:'<path d="M24 7l14 8v18l-14 8-14-8V15z"/><path d="M26 14l-7 11h7l-4 10"/>',
+imm:'<rect x="9" y="12" width="30" height="26" rx="4"/><path d="M9 20h30"/><circle cx="17" cy="28" r="1.8"/><circle cx="25" cy="32" r="1.4"/><circle cx="31" cy="26" r="2"/><path d="M15 12V8M24 12V6M33 12V8"/>',
 farm:'<path d="M8 37l5-15h22l5 15z"/><path d="M11 30h26M20 22l-2 15M28 22l2 15"/><circle cx="36" cy="11" r="4"/><path d="M36 3v2M43 11h-2M29 11h2"/>',
+sat:'<path d="M10 30c6 6 16 6 22 0z"/><path d="M21 28l9-9"/><circle cx="32" cy="17" r="2.5"/><path d="M26 8l3 3M34 10l-1 4M13 36l-3 4M35 36l3 4"/>',
 qtm:'<circle cx="24" cy="24" r="3.5" fill="currentColor"/><ellipse cx="24" cy="24" rx="16" ry="6.5"/><ellipse cx="24" cy="24" rx="16" ry="6.5" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="16" ry="6.5" transform="rotate(120 24 24)"/>',
 fus:'<circle cx="24" cy="24" r="14"/><circle cx="24" cy="24" r="6"/><path d="M24 5v6M24 37v6M5 24h6M37 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4"/>',
-sing:'<circle cx="24" cy="24" r="6" fill="#000"/><ellipse cx="24" cy="24" rx="19" ry="7" transform="rotate(-22 24 24)"/><path d="M11 13c8-6 21-4 25 7"/><path d="M37 35c-8 6-21 4-25-7"/>'};
+sing:'<circle cx="24" cy="24" r="6" fill="#000"/><ellipse cx="24" cy="24" rx="19" ry="7" transform="rotate(-22 24 24)"/><path d="M11 13c8-6 21-4 25 7"/><path d="M37 35c-8 6-21 4-25-7"/>',
+gen:'<path d="M24 6l12 10-12 26L12 16z"/><path d="M12 16h24M24 6l-5 10 5 26 5-26z"/>'};
 function ic(id,a,z,s=48){const u='g'+(uid++);
-return `<svg viewBox="0 0 48 48" width="${s}" height="${s}"><defs><linearGradient id="${u}" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="44" y2="44"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${z}"/></linearGradient>
-<radialGradient id="${u}b" cx=".3" cy=".25" r="1"><stop offset="0" stop-color="${z}" stop-opacity=".45"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
-<rect x="1" y="1" width="46" height="46" rx="13" fill="url(#${u}b)" stroke="${z}" stroke-opacity=".5"/>
-<g fill="none" stroke="url(#${u})" color="${a}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${G[id]}</g></svg>`}
+return `<svg viewBox="0 0 48 48" width="${s}" height="${s}"><defs>
+<linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b3048"/><stop offset=".55" stop-color="#151827"/><stop offset="1" stop-color="#0a0c16"/></linearGradient>
+<linearGradient id="${u}s" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="44" y2="44"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${z}"/></linearGradient>
+<radialGradient id="${u}g" cx=".5" cy=".4" r=".62"><stop offset="0" stop-color="${a}" stop-opacity=".34"/><stop offset="1" stop-color="${a}" stop-opacity="0"/></radialGradient></defs>
+<rect x="1" y="1" width="46" height="46" rx="11" fill="url(#${u}p)" stroke="url(#${u}s)" stroke-width="1.4"/>
+<rect x="1" y="1" width="46" height="46" rx="11" fill="url(#${u}g)"/>
+<path d="M5 9c0-2.2 1.8-4 4-4h30c2.2 0 4 1.8 4 4" fill="none" stroke="#fff" stroke-opacity=".2"/>
+<g transform="translate(4.8 2.4) scale(.8)" fill="none" stroke="url(#${u}s)" color="${a}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${G[id]}</g>
+<circle class="led" cx="15" cy="42.2" r="1.5" fill="${a}"/><circle class="led" style="animation-delay:.35s" cx="20" cy="42.2" r="1.5" fill="${a}"/><circle class="led" style="animation-delay:.7s" cx="25" cy="42.2" r="1.5" fill="${z}"/>
+<rect x="31" y="41" width="9" height="2.4" rx="1.2" fill="${z}" fill-opacity=".7"/></svg>`}
 const PICK='<svg width="78" height="78" viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M12 54L44 22" stroke-width="6"/><path d="M26 10c16-5 30 3 32 20-7-10-16-12-26-10z" fill="#fff" fill-opacity=".92" stroke-width="3"/></svg>';
-const NAVI={mine:'<path d="M5 19l10-10M11 5c5-1 9 2 9 7-3-3-5-4-8-3z"/>',miners:'<path d="M3 20V9l6 4V9l6 4V5h6v15z"/>',ups:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"/>',ms:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',rk:'<path d="M7 4h10v5a5 5 0 01-10 0zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3M12 14v4M8 21h8"/>',tk:'<circle cx="12" cy="12" r="9"/><path d="M8 9h8M8 12h8M8 15h8"/>'};
-const TABS=[['mine','Minar'],['miners','Mineros'],['ups','Mejoras'],['ms','Misiones'],['rk','Ranking'],['tk','Token']];
-let tab='mine';
+const NAVI={mine:'<path d="M5 19l10-10M11 5c5-1 9 2 9 7-3-3-5-4-8-3z"/>',miners:'<path d="M3 20V9l6 4V9l6 4V5h6v15z"/>',ups:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"/>',shop:'<path d="M4 7h16l-1.5 11a2 2 0 01-2 1.7H7.5a2 2 0 01-2-1.7zM9 7a3 3 0 016 0"/>',stake:'<path d="M12 3v18M7 8l5-5 5 5M6 21h12"/>',ms:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',rk:'<path d="M7 4h10v5a5 5 0 01-10 0zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3M12 14v4M8 21h8"/>',tk:'<circle cx="12" cy="12" r="9"/><path d="M8 9h8M8 12h8M8 15h8"/>'};
+const TABS=[['mine','Minar'],['miners','Mineros'],['ups','Mejoras'],['shop','Tienda'],['stake','Staking'],['ms','Misiones'],['rk','Ranking'],['tk','Token']];
 $('nav').innerHTML=TABS.map(t=>`<button data-t="${t[0]}"><svg viewBox="0 0 24 24">${NAVI[t[0]]}</svg>${t[1]}</button>`).join('');
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b){tab=b.dataset.t;view()}};
+$('netl').innerHTML='<i></i>Sistema en línea · '+esc(NET.name);
 
-// ===== Vistas =====
+// ===================== VISTAS =====================
+function gateView(){
+ if(!WALLET)return `<div class="card" style="text-align:center"><h3>Bienvenido a ForgeMine</h3><p class="note">Mina, activa tus máquinas cada 24 h y compite en el ranking mundial. Para jugar conecta una billetera compatible con ${esc(NET.name)} (MetaMask u otra billetera EVM).</p><button class="btn g" id="gc" style="width:100%;margin-top:12px">Conectar billetera</button></div>`;
+ return `<div class="card"><h3>Crea tu perfil de minero</h3><form id="pf" autocomplete="off">
+ <label for="pn">Nombre público (3–16)</label><input id="pn" maxlength="16" minlength="3" required placeholder="Tu alias">
+ <label for="pc">País</label><select id="pc" required><option value="">Selecciona tu país…</option>${COUNTRIES.map(c=>`<option value="${c.cc}">${c.f} ${esc(c.n)}</option>`).join('')}</select>
+ <label for="pe">Correo (opcional)</label><input id="pe" type="email" placeholder="tucorreo@ejemplo.com">
+ <p class="note">Tu nombre y bandera aparecen en el ranking público. El correo es opcional, nunca se muestra y solo se usa para avisos del juego.</p>
+ <button class="btn g" type="submit" style="width:100%;margin-top:10px">Entrar al juego</button></form></div>`}
+
+function minerCard(m,i){
+ const l=S.lv[m.id],nx=HITOS.find(x=>x>l),pv=[0].concat(HITOS).filter(x=>x<=l).pop(),pc=nx?(l-pv)/(nx-pv)*100:100;
+ if(m.lock&&!genOK()&&l===0){const need=CFG.GEN_USD/CFG.FORGE_USD,p=Math.min(staked()/need*100,100);
+  return `<div class="card lock gen" style="animation-delay:${i*.04}s"><div class="it"><div class="ico">${ic(m.id,m.a,m.z,52)}</div><div class="t"><span class="rar" style="color:${RC[m.rar]}">${m.rar} · Exclusivo</span><b>${m.n} 🔒</b><span>Se desbloquea con $${CFG.GEN_USD} en FORGE en staking (${fmt(need)} FORGE)</span></div></div><div class="bar"><i style="width:${p}%"></i></div><div class="row"><span>En staking: ${fmt(staked())} FORGE</span><span>${Math.floor(p)}%</span></div></div>`}
+ const on=isAct(m);
+ return `<div class="card ${m.lock?'gen':''}" style="animation-delay:${i*.04}s;border-left:3px solid ${RC[m.rar]}"><div class="it"><div class="ico">${ic(m.id,m.a,m.z,52)}</div>
+ <div class="t"><span class="rar" style="color:${RC[m.rar]}">${m.rar}</span><b>${m.n} · Nv ${l}</b><span>+${fmt(m.r*mm(m)*gmBase())}/s por nivel · total ${fmt(m.r*l*mm(m)*gmBase())}/s</span></div>
+ <button class="btn" data-m="${m.id}" data-cost="${bulk(m)}">${fmt(bulk(m))}</button></div>
+ <div class="bar"><i style="width:${pc}%"></i></div><div class="row"><span>${nx?'Hito x2 en Nv '+nx:'Todos los hitos logrados'} · x${mm(m)}</span>
+ ${l>0?`<span>${on?`<span class="chip on">Activo</span> <span data-cd="${expiry(m)}"></span>`:`<span class="chip off">Apagado</span> <button class="btn sm" data-act="${m.id}">Activar</button>`}</span>`:'<span></span>'}</div></div>`}
+
 function view(){
+ document.body.classList.toggle('gated',!ready());
  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+ $('wallet').textContent=WALLET?short(WALLET):'Conectar billetera';
+ if(!ready()){$('view').innerHTML=gateView();return}
  let h='';
- if(tab==='mine'){const nc=Math.floor(Math.sqrt(S.total/1e4)),can=S.total>=1e5&&nc>S.cr;
-  const own=M.filter(m=>S.lv[m.id]>0);
-  h=`<div class="card"><div class="orbw"><div class="halo"></div>
+ if(tab==='mine'){const nc=Math.floor(Math.sqrt(S.total/1e4)),can=S.total>=1e5&&nc>S.cr,own=M.filter(m=>S.lv[m.id]>0),off=own.filter(m=>!isAct(m)).length;
+  h=(own.length&&off?`<div class="card warn it"><div class="ico" style="font-size:26px">⏻</div><div class="t"><b>${off} ${off>1?'mineros apagados':'minero apagado'}</b><span>Actívalos cada 24 h para que produzcan.</span></div><button class="btn g" data-actall="1">Activar todos</button></div>`:'')+
+  `<div class="card"><div class="orbw"><div class="halo"></div>
   <svg class="ring r1" viewBox="0 0 200 200"><circle cx="100" cy="100" r="96" fill="none" stroke="url(#rg)" stroke-width="2" stroke-dasharray="3 11" stroke-linecap="round"/></svg>
   <svg class="ring r2" viewBox="0 0 200 200"><circle cx="100" cy="100" r="96" fill="none" stroke="url(#rg)" stroke-width="1.5" stroke-dasharray="40 14" opacity=".6"/></svg>
   <button class="orb" id="orb" aria-label="Minar">${PICK}</button></div>
-  <div class="row" style="justify-content:center">+<b id="cpw" style="color:var(--g)"></b> por toque</div></div>
-  <div class="card"><h3>Tu sala de máquinas</h3><div class="plant">${own.length?own.map(m=>`<div class="tile" style="animation-delay:${Math.random()*2}s">${ic(m.id,m.a,m.z,46)}<em>${S.lv[m.id]}</em></div>`).join(''):'<span class="row">Compra tu primer minero en la pestaña Mineros</span>'}</div></div>
+  <div class="row" style="justify-content:center">+<b id="cpw" style="color:var(--g)"></b> por toque${boostOn()?` · <b style="color:var(--gold)">Boost x${S.boost.x} <span data-cd="${S.boost.until}"></span></b>`:''}</div></div>
+  <div class="card"><h3>Tu sala de máquinas</h3><div class="plant">${own.length?own.map(m=>`<div class="tile ${isAct(m)?'':'off'}" style="animation-delay:${Math.random()*2}s">${ic(m.id,m.a,m.z,46)}<em>${S.lv[m.id]}</em></div>`).join(''):'<span class="row">Compra tu primer minero en la pestaña Mineros</span>'}</div></div>
   <div class="card"><h3>Producción en vivo</h3><canvas class="cv" id="cv"></canvas></div>
   <div class="card claim"><svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="34" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="8"/><circle id="ringp" cx="42" cy="42" r="34" fill="none" stroke="url(#rg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="213.6" transform="rotate(-90 42 42)" style="transition:stroke-dashoffset .5s"/><text id="ringt" x="42" y="47" text-anchor="middle" fill="currentColor" font-size="15" font-weight="800">0%</text></svg>
-  <div class="t"><div class="row"><span>$FORGE por reclamar</span></div><b id="pend" style="font-size:22px"></b><div class="row" id="eco" style="flex-wrap:wrap"></div>
+  <div class="t"><div class="row"><span>$FORGE por retirar</span></div><b id="pend" style="font-size:22px"></b><div class="row" id="eco" style="flex-wrap:wrap"></div>
   <button class="btn g" id="claim" style="width:100%;margin-top:8px"></button></div></div>
   <div class="card it"><div class="ico" style="font-size:30px">💎</div><div class="t"><b>Ascensión</b><span>Reinicia y gana Cristales (+5% a todo cada uno). Requiere 100K minados.</span></div><button class="btn o" id="asc" ${can?'':'disabled'}>+${Math.max(nc-S.cr,0)}💎</button></div>`}
- if(tab==='miners')h=`<div class="q">${[1,10,25].map(n=>`<button data-q="${n}" class="${q===n?'on':''}">x${n}</button>`).join('')}</div>`+M.map((m,i)=>{
-  const l=S.lv[m.id],nx=HITOS.find(x=>x>l),pv=[0].concat(HITOS).filter(x=>x<=l).pop(),pc=nx?(l-pv)/(nx-pv)*100:100;
-  return `<div class="card" style="animation-delay:${i*.04}s;border-left:3px solid ${RC[m.rar]}"><div class="it"><div class="ico">${ic(m.id,m.a,m.z,52)}</div>
-  <div class="t"><span class="rar" style="color:${RC[m.rar]}">${m.rar}</span><b>${m.n} · Nv ${l}</b><span>+${fmt(m.r*mm(m)*gm())}/s por nivel · total ${fmt(m.r*l*mm(m)*gm())}/s</span></div>
-  <button class="btn" data-m="${m.id}" data-cost="${bulk(m)}">${fmt(bulk(m))}</button></div>
-  <div class="bar"><i style="width:${pc}%"></i></div><div class="row"><span>${nx?'Hito x2 en Nv '+nx:'Todos los hitos logrados'}</span><span>x${mm(m)}</span></div></div>`}).join('');
- if(tab==='ups')h=UP.map((u,i)=>`<div class="card it" style="animation-delay:${i*.04}s"><div class="ico" style="font-size:28px;width:48px;height:48px;border-radius:13px;background:var(--card2);border:1px solid var(--line)">${u.k}</div><div class="t"><b>${u.n}</b><span>${u.d}</span></div>
+ if(tab==='miners')h=`<div class="card it"><div class="ico" style="font-size:26px">⏻</div><div class="t"><b>Activación diaria</b><span>Cada minero produce 24 h desde que lo activas. Actívalos uno por uno o todos a la vez.</span></div><button class="btn g" data-actall="1">Activar todos</button></div>
+  <div class="q">${[1,10,25].map(n=>`<button data-q="${n}" class="${q===n?'on':''}">x${n}</button>`).join('')}</div>`+M.map(minerCard).join('');
+ if(tab==='ups')h=`<div class="note" style="text-align:center;margin-bottom:8px">Los precios suben a medida que avanzas. Las mejoras de producción multiplican entre sí.</div>`+UP.map((u,i)=>`<div class="card it" style="animation-delay:${i*.03}s"><div class="ico" style="font-size:28px;width:48px;height:48px;border-radius:13px;background:var(--card2);border:1px solid var(--line)">${u.k}</div><div class="t"><b>${u.n}</b><span>${u.d}</span></div>
   ${S.up[u.id]?'<span class="tag">Activa</span>':`<button class="btn" data-u="${u.id}" data-cost="${u.c}">${fmt(u.c)}</button>`}</div>`).join('');
+ if(tab==='shop'){const ok=!!CFG.SHOP_ADDRESS;
+  h=`<div class="card ${ok?'':'warn'}"><h3>Tienda</h3><p class="note" style="text-align:center">Paga con FORGE (${Math.round(CFG.SHOP_DISCOUNT*100)}% de descuento) o con ETH de ${esc(NET.name)}. ${ok?'Contrato verificado en el explorer.':'La tienda se activa en cuanto se despliegue su contrato.'}</p></div>`+
+  SHOP.map((it,i)=>`<div class="card" style="animation-delay:${i*.04}s"><div class="it"><div class="ico" style="font-size:30px;width:52px;height:52px;border-radius:13px;background:var(--card2);border:1px solid var(--line)">${it.k}</div><div class="t"><b>${it.name}</b><span>${it.d}</span></div></div>
+  <div class="two"><button class="btn g sm" data-buy="${it.id}" data-cur="forge">${forgeP(it)} FORGE</button><button class="btn sm" data-buy="${it.id}" data-cur="eth">${ethP(it)} ETH</button></div></div>`).join('')}
+ if(tab==='stake'){const need=CFG.GEN_USD/CFG.FORGE_USD;
+  h=`<div class="card"><h3>Staking de FORGE</h3><div class="kp"><div><small>En staking</small><b>${fmt(staked())}</b></div><div><small>Valor aprox.</small><b>$${(staked()*CFG.FORGE_USD).toFixed(2)}</b></div><div><small>Disponible</small><b>${fmt(S.pend)}</b></div></div>
+  <p class="note" style="margin-top:10px">Bloquea FORGE ganado en el juego durante un plazo. Al terminar el plazo recibes tu capital más la recompensa, todo en FORGE. Las tasas son estimadas y pueden ajustarse según el fondo de recompensas. Con $${CFG.GEN_USD} (${fmt(need)} FORGE) en staking desbloqueas el minero Génesis.</p>
+  <div class="stkrow" style="margin-top:10px"><input id="stkAmt" type="number" inputmode="decimal" min="10" step="any" placeholder="Cantidad (mín. 10 FORGE)"><button class="btn o sm" id="stkMax">Máx</button></div>
+  <div class="two">${CFG.STAKE_PLANS.map((p,i)=>`<button class="btn g" data-plan="${i}">${p.d} días · ~${(p.r*100).toFixed(1)}%/día</button>`).join('')}</div></div>
+  <h3>Tus stakings</h3>`+(S.stakes.length?S.stakes.map((s,i)=>{const done=Date.now()>=s.end,pay=s.amt*(1+s.r*s.d);return `<div class="card"><div class="it"><div class="t"><b>${fmt(s.amt)} FORGE · ${s.d} días</b><span>Recibirás ${fmt(pay)} FORGE · ${done?'<span class="chip on">Listo</span>':'faltan <span data-cd="'+s.end+'"></span>'}</span></div><button class="btn g sm" data-unst="${i}" ${done?'':'disabled'}>Retirar</button></div><div class="bar"><i style="width:${Math.min(100,(Date.now()-s.start)/(s.end-s.start)*100)}%"></i></div></div>`}).join(''):'<div class="card note" style="text-align:center">Aún no tienes stakings activos.</div>')}
  if(tab==='ms')h=MI.map(m=>{const p=Math.min(prog(m.k),m.g),d=p>=m.g,c=S.ms[m.id];
   return `<div class="card"><div class="it"><div class="t"><b>${m.n}</b><span>Recompensa: ${m.rw} $FORGE</span></div>
   <button class="btn g" data-ms="${m.id}" ${d&&!c?'':'disabled'}>${c?'Reclamada ✓':'Reclamar'}</button></div>
   <div class="bar"><i style="width:${p/m.g*100}%"></i></div><div class="row"><span>${fmt(p)} / ${fmt(m.g)}</span><span>Se reinicia a diario</span></div></div>`}).join('');
- if(tab==='rk'){const me=S.total,L=[{n:'ForgeWhale',s:me*1.5},{n:'NeonMiner',s:me*1.3},{n:'Kira',s:me*1.1},{n:S.wallet?short(S.wallet):'Tú',s:me,me:1}].sort((a,b)=>b.s-a.s);
-  h=`<div class="card">${L.map((x,i)=>`<div class="rk ${x.me?'me':''}"><em>${i+1}</em><span>${x.n}</span><b>${fmt(x.s)}</b></div>`).join('')}</div><div class="row" style="justify-content:center">Ranking simulado · Temporada 1</div>`}
- if(tab==='tk'){const D=[['Jugadores (minería)',40,'#14f195'],['Liquidez',20,'#9945ff'],['Equipo (con vesting)',15,'#4cc9f0'],['Ecosistema',15,'#ffd24a'],['Reserva',10,'#ff5a7a']];let o=0;
-  h=`<div class="card"><h3>Tu $FORGE en cadena</h3><div class="bal"><div class="n" style="font-size:28px">${!FORGE_ADDRESS||!S.wallet?'—':chainBal===null?'…':fmt(chainBal)}</div></div><div class="row" style="justify-content:center;flex-wrap:wrap">${NET.name}${FORGE_ADDRESS?' · <a href="'+NET.ex+'/address/'+FORGE_ADDRESS+'" target="_blank" rel="noopener" style="color:var(--c)">Ver contrato</a>':' · contrato pendiente de despliegue'}</div></div><div class="card"><h3>Distribución propuesta</h3><div class="it"><svg width="130" height="130" viewBox="0 0 36 36" style="flex:none;transform:rotate(-90deg)">${D.map(d=>{const s=`<circle cx="18" cy="18" r="15.9155" fill="none" stroke="${d[2]}" stroke-width="4.5" stroke-dasharray="${d[1]-1} ${101-d[1]}" stroke-dashoffset="${-o}"/>`;o+=d[1];return s}).join('')}</svg>
+ if(tab==='rk'){h=`<div class="card"><h3>Ranking mundial · poder de minado</h3><div id="rkl" class="note" style="text-align:center">Cargando…</div></div><div class="card it"><div class="ico" style="font-size:26px">🏆</div><div class="t"><b>Premios semanales</b><span>El 10% del suministro se reparte entre los mejores del ranking. Próximo cierre en <b data-cd="${nextMon()}"></b></span></div></div>`;loadRank()}
+ if(tab==='tk'){const D=[['Jugadores (minería y recompensas)',50,'#14f195'],['Liquidez',20,'#8a4dff'],['Equipo (bloqueado)',20,'#4cc9f0'],['Premios semanales de ranking',10,'#ffd24a']];let o=0;
+  h=`<div class="card"><h3>Tu $FORGE en cadena</h3><div class="bal"><div class="n" style="font-size:28px">${!CFG.FORGE_ADDRESS?'—':chainBal===null?'…':fmt(chainBal)}</div></div>
+  <div class="row" style="justify-content:center;flex-wrap:wrap">${esc(NET.name)}${CFG.FORGE_ADDRESS?' · <a href="'+NET.ex+'/address/'+CFG.FORGE_ADDRESS+'" target="_blank" rel="noopener" style="color:var(--c)">Ver contrato</a>':' · contrato pendiente de despliegue'}</div></div>
+  <div class="card"><h3>Distribución · 1.000.000.000 FORGE</h3><div class="it"><svg width="130" height="130" viewBox="0 0 36 36" style="flex:none;transform:rotate(-90deg)">${D.map(d=>{const s=`<circle cx="18" cy="18" r="15.9155" fill="none" stroke="${d[2]}" stroke-width="4.5" stroke-dasharray="${d[1]-1} ${101-d[1]}" stroke-dashoffset="${-o}"/>`;o+=d[1];return s}).join('')}</svg>
   <div class="leg">${D.map(d=>`<div><i style="background:${d[2]}"></i>${d[0]} <b>${d[1]}%</b></div>`).join('')}</div></div></div>
-  <h3>Economía segura</h3><div class="card leg"><div>⚡ <b>Energía</b> (en juego, ilimitada) y <b>$FORGE</b> (token, escaso) están separados.</div><div>📉 Emisión decreciente: cuanto más se mina en total, menos $FORGE se genera.</div><div>🛑 Límite diario de reclamo y enfriamiento entre reclamos.</div><div>🔥 El 5% de cada reclamo se quema.</div><div>🔒 Suministro máximo fijo en el contrato.</div><div>🛡️ En producción, un servidor valida cada reclamo (anti-bots).</div><div>👛 Token ERC-20 en Robinhood Chain, compatible con MetaMask y cualquier billetera EVM.</div></div>
-  <h3>Hoja de ruta</h3><div class="card leg"><div><b style="color:var(--g)">Fase 1</b> Demo jugable y comunidad</div><div><b style="color:var(--g)">Fase 2</b> Token ERC-20 y reclamos en la testnet de Robinhood Chain</div><div><b style="color:var(--g)">Fase 3</b> NFTs de mineros</div><div><b style="color:var(--g)">Fase 4</b> Mainnet, temporadas y torneos</div></div>`}
+  <h3>Cómo funciona</h3><div class="card leg"><div>⚡ <b>Energía</b> (en juego, ilimitada) y <b>$FORGE</b> (token, escaso) están separados.</div><div>📉 La emisión de FORGE decrece mientras más se mina en total.</div><div>🛑 Límite diario de retiro (sube con lo que inviertes) y enfriamiento de 1 h entre retiros.</div><div>💵 Retiro mínimo: $${CFG.MIN_CLAIM_USD} en FORGE (${minClaim()} FORGE).</div><div>🔥 El ${BURN*100}% de cada retiro se quema.</div><div>🔒 Suministro máximo fijo en el contrato: nadie puede crear más FORGE.</div><div>👛 Token ERC-20 en ${esc(NET.name)}, compatible con MetaMask.</div><div>🕒 Los retiros se registran y se procesan hasta el lanzamiento oficial.</div></div>`}
  $('view').innerHTML=h;upd();afford();
 }
-let dB=S.bal;
+
+async function loadRank(){
+ const box=()=>$('rkl');
+ if(!sb){if(box())box().textContent='Ranking no disponible (sin conexión).';return}
+ if(rankCache&&Date.now()-rankAt<15000){drawRank();return}
+ const {data,error}=await sb.from('players').select('wallet,name,flag,power').order('power',{ascending:false}).limit(50);
+ if(error){if(box())box().textContent='No se pudo cargar el ranking.';return}
+ rankCache=data||[];rankAt=Date.now();if(tab==='rk')drawRank()}
+function drawRank(){const b=$('rkl');if(!b)return;
+ if(!rankCache.length){b.textContent='Aún no hay jugadores. ¡Sé el primero!';return}
+ b.style.textAlign='left';b.className='';
+ b.innerHTML=rankCache.map((x,i)=>`<div class="rk ${x.wallet===WALLET?'me':''}"><em>${i+1}</em><span>${esc(flagOf(x.flag))} ${esc(x.name)}</span><b>${fmt(+x.power)}/s</b></div>`).join('')+
+ (rankCache.some(x=>x.wallet===WALLET)?'':`<div class="rk me"><em>·</em><span>${esc(flagOf(S.profile.flag))} ${esc(S.profile.name)} (tú)</span><b>${fmt(power())}/s</b></div>`)}
+function nextMon(){const d=new Date(),add=((8-d.getUTCDay())%7)||7;return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()+add)}
+
+let dB=0;
 function upd(){
- $('rate').textContent=fmt(rate());$('mult').textContent='x'+gm().toFixed(2);$('cr').textContent=S.cr;
- $('wallet').textContent=S.wallet?short(S.wallet):'Conectar billetera';
- if(tab==='mine'){$('cpw').textContent=fmt(cp());$('pend').textContent=fmt(S.pend);
-  const p=Math.min(S.pend/MINC,1);$('ringp').style.strokeDashoffset=213.6*(1-p);$('ringt').textContent=Math.floor(p*100)+'%';
-  const cd=cdLeft();$('claim').disabled=!(S.pend>=MINC&&S.wallet&&!cd&&S.claimed<CAP);$('claim').textContent=!S.wallet?'Conecta tu billetera':cd?'Enfriamiento '+Math.ceil(cd/60000)+' min':S.claimed>=CAP?'Límite diario alcanzado':S.pend<MINC?'Mínimo '+MINC+' $FORGE':'Reclamar a mi billetera';$('eco').innerHTML='<span>Hoy '+fmt(S.claimed)+'/'+CAP+'</span><span>Emisión '+Math.round(emi()/.1*100)+'%</span><span>🔥 '+fmt(S.burned)+'</span>';draw()}
-}
+ $('rate').textContent=fmt(rate());$('pow').textContent=fmt(power());$('cr').textContent=S.cr;
+ if(tab==='mine'&&ready()&&$('claim')){$('cpw').textContent=fmt(cp());$('pend').textContent=fmt(S.pend);
+  const mn=minClaim(),p=Math.min(S.pend/mn,1);$('ringp').style.strokeDashoffset=213.6*(1-p);$('ringt').textContent=Math.floor(p*100)+'%';
+  const cd=cdLeft(),room=claimRoom();
+  $('claim').disabled=!(S.pend>=mn&&room>=mn&&!cd);
+  $('claim').textContent=cd?'Enfriamiento '+Math.ceil(cd/60000)+' min':room<mn?'Límite diario alcanzado':S.pend<mn?'Mínimo '+mn+' $FORGE ($'+CFG.MIN_CLAIM_USD+')':'Solicitar retiro';
+  $('eco').innerHTML='<span>Retirado hoy '+fmt(S.claimed)+'/'+fmt(dailyCap())+'</span><span>Emisión '+Math.round(emi()/.01*100)+'%</span><span>🔥 '+fmt(S.burned)+'</span>';draw()}
+ document.querySelectorAll('[data-cd]').forEach(e=>{const t=+e.dataset.cd-Date.now();e.textContent=t>0?cdText(t):'terminó'})}
 function draw(){const c=$('cv');if(!c)return;const d=devicePixelRatio||1,w=c.clientWidth*d,h=c.clientHeight*d;if(c.width!==w){c.width=w;c.height=h}
  const x=c.getContext('2d');x.clearRect(0,0,w,h);x.strokeStyle='rgba(150,144,192,.15)';x.lineWidth=1;for(let i=1;i<4;i++){x.beginPath();x.moveTo(0,h*i/4);x.lineTo(w,h*i/4);x.stroke()}
  const a=S.hist;if(a.length<2)return;const mx=Math.max(...a,1)*1.1,P=a.map((v,i)=>[i/(a.length-1)*w,h-6*d-v/mx*(h-14*d)]);
- const gr=x.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(153,69,255,.55)');gr.addColorStop(1,'rgba(153,69,255,0)');
+ const gr=x.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(0,240,255,.45)');gr.addColorStop(1,'rgba(0,240,255,0)');
  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.lineTo(w,h);x.lineTo(0,h);x.fillStyle=gr;x.fill();
  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.strokeStyle='#14f195';x.lineWidth=2.5*d;x.shadowColor='#14f195';x.shadowBlur=10*d;x.lineJoin='round';x.stroke();
  const l=P[P.length-1];x.beginPath();x.arc(l[0]-3*d,l[1],4*d,0,7);x.fillStyle='#fff';x.fill()}
+const afford=()=>document.querySelectorAll('[data-cost]').forEach(b=>b.disabled=S.bal<+b.dataset.cost);
 
-// ===== Eventos =====
-function burst(cx,cy){if(REDUCE)return;for(let i=0;i<7;i++){const c=document.createElement('div');c.className='coin';c.style.left=cx+'px';c.style.top=cy+'px';const a=Math.random()*6.28,r=40+Math.random()*50;c.style.setProperty('--dx',Math.cos(a)*r+'px');c.style.setProperty('--dy',Math.sin(a)*r-20+'px');document.body.appendChild(c);setTimeout(()=>c.remove(),700)}}
-document.addEventListener('click',e=>{const t=e.target;
- if(t.closest('#orb')){const g=cp();add(g);S.clicks++;const p=document.createElement('div');p.className='pop';p.textContent='+'+fmt(g);p.style.left=(e.clientX-12)+'px';p.style.top=(e.clientY-30)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),850);burst(e.clientX,e.clientY);upd();afford();return}
- let b=t.closest('[data-q]');if(b){q=+b.dataset.q;view();return}
- b=t.closest('[data-m]');if(b){const m=M.find(x=>x.id===b.dataset.m),c=bulk(m);if(S.bal>=c){const old=HITOS.filter(h=>S.lv[m.id]>=h).length;S.bal-=c;S.lv[m.id]+=q;if(HITOS.filter(h=>S.lv[m.id]>=h).length>old)toast('🎉 ¡Hito alcanzado! '+m.n+' produce x2');dB=Math.min(dB,S.bal);view();save()}return}
- b=t.closest('[data-u]');if(b){const u=UP.filter(x=>x.id===b.dataset.u)[0];if(S.bal>=u.c){S.bal-=u.c;S.up[u.id]=1;toast('✅ '+u.n+' activada');view();save()}return}
- b=t.closest('[data-ms]');if(b){const m=MI.filter(x=>x.id===b.dataset.ms)[0];S.ms[m.id]=1;add(m.rw);toast('🎯 +'+m.rw+' $FORGE');view();save();return}
- if(t.closest('#claim')){const l=claimable();if(l<=0||cdLeft())return;const bn=l*BURN;S.pend-=l;S.claimed+=l;S.lastClaim=Date.now();S.burned+=bn;toast('✅ Demo: se enviarían '+fmt(l-bn)+' $FORGE a '+short(S.wallet)+' · 🔥 '+fmt(bn)+' quemados');upd();save();return}
- if(t.closest('#asc')){const nc=Math.floor(Math.sqrt(S.total/1e4));if(nc>S.cr&&confirm('¿Ascender? Reinicias mineros y mejoras, pero ganas '+(nc-S.cr)+' 💎')){S.cr=nc;S.bal=0;dB=0;S.up={};M.forEach(m=>S.lv[m.id]=0);toast('💎 ¡Has ascendido!');view();save()}return}
-});
-let chainBal=null;
-$('netl').innerHTML='<i></i>Sistema en línea · '+NET.name;
+// ===================== CADENA =====================
 async function ensureChain(eth){
  try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:NET.hex}]})}
- catch(e){
-  if(e&&(e.code===4902||e.code===-32603)){await eth.request({method:'wallet_addEthereumChain',params:[{chainId:NET.hex,chainName:NET.name,nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[NET.rpc],blockExplorerUrls:[NET.ex]}]})}
-  else throw e}}
-async function refreshOnchain(){
- chainBal=null;
- if(FORGE_ADDRESS&&S.wallet&&window.ethereum&&/^0x[0-9a-fA-F]{40}$/.test(S.wallet)){
-  try{const data='0x70a08231'+S.wallet.slice(2).toLowerCase().padStart(64,'0');
-   const r=await window.ethereum.request({method:'eth_call',params:[{to:FORGE_ADDRESS,data:data},'latest']});
-   chainBal=Number(BigInt(r)/10n**14n)/1e4}catch(e){}}
- if(tab==='tk')view()}
-if(window.ethereum&&window.ethereum.on){
- window.ethereum.on('accountsChanged',a=>{S.wallet=(a&&a[0])||null;refreshOnchain();view();save()});
- window.ethereum.on('chainChanged',()=>refreshOnchain())}
-refreshOnchain();
-$('wallet').onclick=async()=>{
- if(S.wallet){S.wallet=null;chainBal=null;view();save();return}
- const eth=window.ethereum;
- if(eth){try{const a=await eth.request({method:'eth_requestAccounts'});S.wallet=a[0];await ensureChain(eth)}catch(e){S.wallet=null;toast('No se pudo conectar: '+((e&&e.message)||'cancelado'));return}refreshOnchain()}
- else{S.wallet='0xDemo000000000000000000000000000000dEaD';toast('Modo demo: instala MetaMask para conectar una billetera real')}
- view();save();
-};
-setInterval(()=>{const f=rate();if(f>0){add(f);S.hist.push(f);if(S.hist.length>60)S.hist.shift();upd();afford();save()}},1000);
-(function loop(){dB+=(S.bal-dB)*.18;if(Math.abs(S.bal-dB)<.05)dB=S.bal;$('bal').textContent=fmt(dB);requestAnimationFrame(loop)})();
-view();
-if(awayG>1)toast('💤 Mientras no estabas minaste '+fmt(awayG)+' $FORGE');
- // ==========================================
-// CONEXIÓN Y LÓGICA DE SUPABASE (RANKING)
-// ==========================================
-const supabaseUrl = 'https://wvkkgyyjrumfdcpzzcug.supabase.co';
-const supabaseKey = 'sb_publishable_Q-korJ9cVAfTvbGywuYj4w_bVuoxV1R';
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+ catch(e){if(e&&(e.code===4902||e.code===-32603)){await eth.request({method:'wallet_addEthereumChain',params:[{chainId:NET.hex,chainName:NET.name,nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:[NET.rpc],blockExplorerUrls:[NET.ex]}]})}else throw e}}
+async function refreshOnchain(){chainBal=null;
+ if(CFG.FORGE_ADDRESS&&WALLET&&window.ethereum){try{const data='0x70a08231'+WALLET.slice(2).padStart(64,'0');
+  const r=await window.ethereum.request({method:'eth_call',params:[{to:CFG.FORGE_ADDRESS,data},'latest']});chainBal=Number(BigInt(r)/10n**14n)/1e4}catch(e){}}
+ if(tab==='tk'&&ready())view()}
+async function connect(){
+ const eth=window.ethereum;if(!eth){toast('Instala MetaMask u otra billetera EVM para jugar');return}
+ try{const a=await eth.request({method:'eth_requestAccounts'});await ensureChain(eth);loadFor(a[0]);view()}
+ catch(e){toast('No se pudo conectar: '+((e&&e.message)||'cancelado'))}}
+function logout(){save();WALLET=null;S=defS();lsSet('fm_last','');view()}
+async function buyItem(id,cur){
+ const it=SHOP.find(x=>x.id===id);
+ if(!CFG.SHOP_ADDRESS||!window.ethereum||typeof ethers==='undefined'){toast('🛒 La tienda se activa al desplegar su contrato');return}
+ try{await ensureChain(window.ethereum);const sg=await new ethers.BrowserProvider(window.ethereum).getSigner(),shop=new ethers.Contract(CFG.SHOP_ADDRESS,SHOP_ABI,sg);
+  if(cur==='eth'){const tx=await shop.buyWithEth(it.n,{value:ethers.parseEther(ethP(it))});toast('⏳ Confirmando…');await tx.wait()}
+  else{if(!CFG.FORGE_ADDRESS){toast('Token FORGE aún sin desplegar');return}
+   const tk=new ethers.Contract(CFG.FORGE_ADDRESS,TOKEN_ABI,sg),amt=ethers.parseUnits(String(forgeP(it)),18);
+   if((await tk.allowance(WALLET,CFG.SHOP_ADDRESS))<amt){const t1=await tk.approve(CFG.SHOP_ADDRESS,amt);toast('⏳ Aprobando FORGE…');await t1.wait()}
+   const tx=await shop.buyWithForge(it.n);toast('⏳ Confirmando…');await tx.wait()}
+  applyItem(it);toast('✅ Compra confirmada: '+it.name);view();save();refreshOnchain()}
+ catch(e){toast('Compra cancelada o fallida')}}
+async function doClaim(){
+ const mn=minClaim(),l=Math.min(S.pend,claimRoom());
+ if(l<mn||cdLeft())return;
+ if(!sb){toast('Sin conexión con el servidor de retiros');return}
+ const bn=l*BURN,net=l-bn;
+ const {error}=await sb.from('withdrawals').insert({wallet:WALLET,amount:Math.round(net*1e4)/1e4,burned:Math.round(bn*1e4)/1e4,status:'pending'});
+ if(error){toast('No se pudo registrar el retiro, intenta de nuevo');return}
+ S.pend-=l;S.claimed+=l;S.lastClaim=Date.now();S.burned+=bn;
+ toast('✅ Retiro solicitado: '+fmt(net)+' FORGE (🔥 '+fmt(bn)+' quemados)');upd();save()}
+async function syncPlayer(){
+ if(!sb||!ready())return;
+ const {error}=await sb.from('players').upsert({wallet:WALLET,name:S.profile.name,flag:S.profile.flag,power:Math.round(power()*100)/100,total:Math.round(S.total),updated_at:new Date().toISOString()},{onConflict:'wallet'});
+ if(error)console.warn('ranking:',error.message)}
 
-// Guardar o actualizar usuario en la tabla 'leaderboard'
-async function syncScore(identifier, name, score) {
-    if (!identifier) return;
-    try {
-        let { data: existingUser } = await _supabase
-            .from('leaderboard')
-            .select('*')
-            .eq('identifier', identifier)
-            .single();
-
-        if (existingUser) {
-            if (score > existingUser.score) {
-                await _supabase
-                    .from('leaderboard')
-                    .update({ score: score, name: name })
-                    .eq('identifier', identifier);
-            }
-        } else {
-            await _supabase
-                .from('leaderboard')
-                .insert([{ identifier: identifier, name: name, score: score }]);
-        }
-        loadLeaderboard();
-    } catch (err) {
-        console.error("Error al sincronizar con Supabase:", err);
-    }
-}
-
-// Cargar los mejores 10 del Ranking desde Supabase
-async function loadLeaderboard() {
-    try {
-        let { data: leaderboard, error } = await _supabase
-            .from('leaderboard')
-            .select('*')
-            .order('score', { ascending: false })
-            .limit(10);
-
-        if (error) throw error;
-
-        const listContainer = document.getElementById('leaderboard-list') || document.querySelector('.leaderboard-list');
-        if (listContainer && leaderboard) {
-            listContainer.innerHTML = leaderboard.map((item, index) => `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                    <span>#${index + 1} ${item.name}</span>
-                    <span style="font-weight:bold; color:#00ff88;">${Number(item.score).toLocaleString()} FORGE</span>
-                </div>
-            `).join('');
-        }
-    } catch (err) {
-        console.error("Error al cargar Ranking:", err);
-    }
-}
-
-// Registro con billetera EVM (MetaMask) en Robinhood Chain
-async function registerWithWallet() {
-    if (window.ethereum) {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const wallet = accounts[0];
-            const alias = `Wallet_${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
-            const currentScore = window.userScore || 0;
-            await syncScore(wallet.toLowerCase(), alias, currentScore);
-            alert("¡Conectado con tu billetera y registrado en el Ranking!");
-        } catch (e) {
-            console.error(e);
-        }
-    } else {
-        alert("Por favor instala MetaMask u otra billetera EVM.");
-    }
-}
-
-// Registro con Correo Electrónico
-async function registerWithEmail() {
-    const email = prompt("Introduce tu correo electrónico para el Ranking:");
-    if (email && email.includes('@')) {
-        const name = prompt("Introduce tu nombre o alias público:") || email.split('@')[0];
-        const currentScore = window.userScore || 0;
-        await syncScore(email, name, currentScore);
-        alert("¡Registrado en el Ranking con éxito!");
-    }
-}
-
-// Autodetección si abre dentro de Telegram
-document.addEventListener("DOMContentLoaded", () => {
-    if (window.Telegram && window.Telegram.WebApp?.initDataUnsafe?.user) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-        const identifier = `tg_${tgUser.id}`;
-        const name = tgUser.first_name || tgUser.username || "Telegram User";
-        const currentScore = window.userScore || 0;
-        syncScore(identifier, name, currentScore);
-    }
-    loadLeaderboard();
+// ===================== EVENTOS =====================
+function burst(cx,cy){if(REDUCE)return;for(let i=0;i<7;i++){const c=document.createElement('div');c.className='coin';c.style.left=cx+'px';c.style.top=cy+'px';const a=Math.random()*6.28,r=40+Math.random()*50;c.style.setProperty('--dx',Math.cos(a)*r+'px');c.style.setProperty('--dy',Math.sin(a)*r-20+'px');document.body.appendChild(c);setTimeout(()=>c.remove(),700)}}
+document.addEventListener('click',e=>{const t=e.target;
+ if(t.closest('#gc')){connect();return}
+ if(!ready())return;
+ if(t.closest('#orb')){const g=cp();add(g);S.clicks++;const p=document.createElement('div');p.className='pop';p.textContent='+'+fmt(g);p.style.left=(e.clientX-12)+'px';p.style.top=(e.clientY-30)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),850);burst(e.clientX,e.clientY);upd();afford();return}
+ let b=t.closest('[data-q]');if(b){q=+b.dataset.q;view();return}
+ b=t.closest('[data-actall]');if(b){activate();view();return}
+ b=t.closest('[data-act]');if(b){activate([b.dataset.act]);view();return}
+ b=t.closest('[data-m]');if(b){const m=M.find(x=>x.id===b.dataset.m),c=bulk(m);
+  if(m.lock&&!genOK()){toast('🔒 Necesitas $'+CFG.GEN_USD+' en FORGE en staking');return}
+  if(S.bal>=c){const old=HITOS.filter(h=>S.lv[m.id]>=h).length,first=S.lv[m.id]===0;S.bal-=c;S.lv[m.id]+=q;if(first)S.act[m.id]=Date.now()+DAY;
+   if(HITOS.filter(h=>S.lv[m.id]>=h).length>old)toast('🎉 ¡Hito alcanzado! '+m.n+' produce x2');dB=Math.min(dB,S.bal);view();save()}return}
+ b=t.closest('[data-u]');if(b){const u=UP.find(x=>x.id===b.dataset.u);if(S.bal>=u.c){S.bal-=u.c;S.up[u.id]=1;toast('✅ '+u.n+' activada');view();save()}return}
+ b=t.closest('[data-ms]');if(b){const m=MI.find(x=>x.id===b.dataset.ms);if(S.ms[m.id])return;S.ms[m.id]=1;S.pend+=m.rw;toast('🎯 +'+m.rw+' $FORGE');view();save();return}
+ b=t.closest('[data-buy]');if(b){buyItem(b.dataset.buy,b.dataset.cur);return}
+ if(t.closest('#stkMax')){const i=$('stkAmt');if(i)i.value=Math.floor(S.pend*100)/100;return}
+ b=t.closest('[data-plan]');if(b){const p=CFG.STAKE_PLANS[+b.dataset.plan],amt=parseFloat($('stkAmt').value);
+  if(!(amt>=10)){toast('Mínimo 10 FORGE');return}if(amt>S.pend){toast('No tienes tanto FORGE disponible');return}
+  S.pend-=amt;S.stakes.push({amt,start:Date.now(),end:Date.now()+p.d*DAY,r:p.r,d:p.d});toast('🔒 '+fmt(amt)+' FORGE en staking por '+p.d+' días');view();save();return}
+ b=t.closest('[data-unst]');if(b){const s=S.stakes[+b.dataset.unst];if(s&&Date.now()>=s.end){const pay=s.amt*(1+s.r*s.d);S.pend+=pay;S.stakes.splice(+b.dataset.unst,1);toast('✅ +'+fmt(pay)+' FORGE (capital + recompensa)');view();save()}return}
+ if(t.closest('#claim')){doClaim();return}
+ if(t.closest('#asc')){const nc=Math.floor(Math.sqrt(S.total/1e4));if(nc>S.cr&&confirm('¿Ascender? Reinicias mineros y mejoras, pero ganas '+(nc-S.cr)+' 💎')){S.cr=nc;S.bal=0;dB=0;S.up={};S.act={};M.forEach(m=>S.lv[m.id]=0);toast('💎 ¡Has ascendido!');view();save()}return}
 });
+document.addEventListener('submit',async e=>{if(e.target.id!=='pf')return;e.preventDefault();
+ const name=$('pn').value.trim(),cc=$('pc').value,mail=$('pe').value.trim();
+ if(!/^[\p{L}\p{N}_ .-]{3,16}$/u.test(name)){toast('Nombre inválido: usa 3–16 letras o números');return}
+ if(!CC.includes(cc)){toast('Selecciona tu país');return}
+ if(mail&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){toast('Correo inválido');return}
+ S.profile={name,flag:cc};save();
+ if(mail&&sb&&!S.mailSent){const {error}=await sb.from('player_emails').upsert({wallet:WALLET,email:mail},{onConflict:'wallet',ignoreDuplicates:true});if(!error){S.mailSent=true;save()}}
+ view();syncPlayer();toast('✅ ¡Bienvenido, '+name+'!')});
+$('wallet').onclick=()=>{WALLET?logout():connect()};
+if(window.ethereum&&window.ethereum.on){
+ window.ethereum.on('accountsChanged',a=>{if(a&&a[0]){save();loadFor(a[0]);view()}else logout()});
+ window.ethereum.on('chainChanged',()=>refreshOnchain())}
+
+// ===================== BUCLES =====================
+setInterval(()=>{if(!ready())return;rollDay();const f=rate();if(f>0)add(f);S.hist.push(f);if(S.hist.length>60)S.hist.shift();
+ const on=M.some(isAct);if(prevOn&&!on&&M.some(m=>S.lv[m.id]>0))toast('⏻ Tus mineros se apagaron. Actívalos para seguir minando');prevOn=on;
+ upd();afford();save()},1000);
+setInterval(syncPlayer,30000);
+setInterval(()=>{if(tab==='rk'&&ready()){rankAt=0;loadRank()}},30000);
+(function loop(){dB+=(S.bal-dB)*.18;if(Math.abs(S.bal-dB)<.05)dB=S.bal;$('bal').textContent=fmt(dB);requestAnimationFrame(loop)})();
+(async function init(){
+ if(window.ethereum){try{const a=await window.ethereum.request({method:'eth_accounts'});if(a[0]&&lsGet('fm_last')===a[0].toLowerCase())loadFor(a[0])}catch(e){}}
+ view();if(ready())syncPlayer()})();
 </script></body></html>
