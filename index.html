@@ -494,4 +494,43 @@ setInterval(()=>{if(tab==='rk'&&ready()){rankAt=0;loadRank()}},30000);
 (async function init(){
  if(window.ethereum){try{const a=await window.ethereum.request({method:'eth_accounts'});if(a[0]&&lsGet('fm_last')===a[0].toLowerCase())loadFor(a[0])}catch(e){}}
  view();if(ready())syncPlayer()})();
-</script></body></html>
+</script></body>  // --- LÓGICA DE CONEXIÓN DE BILLETERA ---
+const walletBtn = document.getElementById('wallet');
+const claimBtn = document.getElementById('btn-claim');
+
+if (walletBtn) {
+  walletBtn.addEventListener('click', async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        window.userWallet = accounts[0];
+        
+        // Acortar la dirección para mostrarla en el botón
+        walletBtn.innerText = window.userWallet.substring(0, 6) + '...' + window.userWallet.substring(window.userWallet.length - 4);
+        
+        // Mostrar el botón de retiro
+        if (claimBtn) {
+          claimBtn.style.display = 'inline-block';
+        }
+        
+        alert('¡Billetera conectada con éxito!');
+      } catch (err) {
+        console.error(err);
+        alert('Error al conectar la billetera.');
+      }
+    } else {
+      alert('No se detectó MetaMask. Asegúrate de abrirlo desde una billetera compatible o navegador Web3.');
+    }
+  });
+}
+
+// Acción del botón de Retirar
+if (claimBtn) {
+  claimBtn.addEventListener('click', () => {
+    if (!window.userWallet) {
+      alert('Primero debes conectar tu billetera.');
+      return;
+    }
+    alert('Solicitud de retiro de $FORGE registrada correctamente.');
+  });
+} </html>
