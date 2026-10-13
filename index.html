@@ -136,7 +136,8 @@ select option{background:#111;color:#fff}
 <div class="wrap">
 <header><div class="logo"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="url(#rg)"/><path d="M12 36L32 16M24 10c8-1 15 4 16 12-4-5-8-6-13-5z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
 <div>FORGE<b>MINE</b><span class="net" id="netl"></span></div></div>
-<button class="btn o" id="wallet">Conectar billetera</button></header>
+<button class="btn" id="wallet">Conectar billetera</button>
+<button class="btn" id="btn-claim" style="margin-left: 8px; display: none;">Retirar FORGE</button>
 <div class="hero" id="hero"><div class="bal"><small>Energía en juego</small><div class="n" id="bal">0</div></div>
 <div class="kp"><div><small>Por segundo</small><b id="rate">0</b></div><div><small>Poder total</small><b id="pow">0</b></div><div><small>Cristales</small><b id="cr">0</b></div></div></div>
 <div id="view"></div>
@@ -154,8 +155,8 @@ const CFG={
  SHOP_ADDRESS: '0x602a22E5C834Df5F32d2c84C2d0b05fFA2A90856',           // dirección del contrato ForgeShop tras desplegarlo
  FORGE_USD:0.01,                // precio de 1 FORGE en USD (ajústalo al precio real al lanzar)
  ETH_USD:2500,                  // precio de 1 ETH en USD (ajústalo al lanzar)
- MIN_CLAIM_USD:1,               // retiro mínimo: 1 dólar en FORGE
- BASE_CAP:100,                  // límite diario base de FORGE (debe ser >= retiro mínimo en FORGE)
+ MIN_CLAIM_USD:3,               // retiro mínimo: 1 dólar en FORGE
+ BASE_CAP:10,                  // límite diario base de FORGE (debe ser >= retiro mínimo en FORGE)
  CAP_PER_INVEST:0.005,          // el límite diario sube 0.5% de lo invertido (tienda + staking)
  GEN_USD:100,                   // dólares en FORGE en staking para desbloquear el minero Génesis
  SHOP_DISCOUNT:0.10,            // descuento por pagar la tienda con FORGE
@@ -168,7 +169,7 @@ const NETS={
  mainnet:{id:4663,hex:'0x1237',name:'Robinhood Chain',rpc:'https://rpc.mainnet.chain.robinhood.com',ex:'https://robinhoodchain.blockscout.com'}};
 const NET=NETS[CFG.net];
 const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY):null;
-const DAY=864e5,BURN=.05,CD=3600000,GROW=1.15;
+const DAY=864e5,BURN=.05,CD=3600000,GROW=0.01;
 const SHOP_ABI=['function buyWithEth(uint256 itemId) payable','function buyWithForge(uint256 itemId)'];
 const TOKEN_ABI=['function approve(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)'];
 
