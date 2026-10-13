@@ -134,10 +134,13 @@ select option{background:#111;color:#fff}
 <div class="glow a"></div><div class="glow b"></div>
 <div id="toast"></div>
 <div class="wrap">
-<header><div class="logo"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="url(#rg)"/><path d="M12 36L32 16M24 10c8-1 15 4 16 12-4-5-8-6-13-5z" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-<div>FORGE<b>MINE</b><span class="net" id="netl"></span></div></div>
-<button class="btn" id="wallet">Conectar billetera</button>
-<button class="btn" id="btn-claim" style="margin-left: 8px; display: none;">Retirar FORGE</button>
+<header>
+  <div class="logo"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="url(#rg)"/><path d="M12 36L32 16M24 10c8-1 15 4 16 12-4-5-8-6-13-5z" fill="none" stroke="#fff" stroke-width="3"/></svg><div>FORGE<b>MINE</b><span class="net" id="net1"></span></div></div>
+  <div style="display: flex; gap: 6px;">
+    <button class="btn" id="wallet">Conectar billetera</button>
+    <button class="btn" id="btn-claim" style="display: none;">Retirar FORGE</button>
+  </div>
+</header>
 <div class="hero" id="hero"><div class="bal"><small>Energía en juego</small><div class="n" id="bal">0</div></div>
 <div class="kp"><div><small>Por segundo</small><b id="rate">0</b></div><div><small>Poder total</small><b id="pow">0</b></div><div><small>Cristales</small><b id="cr">0</b></div></div></div>
 <div id="view"></div>
